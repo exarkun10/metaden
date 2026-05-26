@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>metaden</Name>
+  <Repository>exarkun10/metaden:latest</Repository>
+  <Registry>https://hub.docker.com/r/exarkun10/metaden</Registry>
+  <Network>host</Network>
+  <MyIP/>
+  <Shell>bash</Shell>
+  <Privileged>false</Privileged>
+  <Support/>
+  <Project/>
+  <Overview>MetaDen Movie File Renamer — Automatically renames movie files using IMDB/TMDB data. Browse a folder of video files, search IMDB for matches, download posters, and rename with a configurable format template. Built with FastAPI + Vue 3.</Overview>
+  <Category>MediaApp:Video Tools:</Category>
+  <WebUI>http://[IP]:[PORT:8265]</WebUI>
+  <TemplateURL/>
+  <Icon>https://raw.githubusercontent.com/exarkun10/metaden/main/icon.png</Icon>
+  <ExtraParams/>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled/>
+  <DonateText/>
+  <DonateLink/>
+  <Requires/>
+
+  <!-- WebUI Port -->
+  <Config Name="WebUI Port" Target="8265" Default="8265" Mode="tcp" Description="Port for the MetaDen web interface." Type="Port" Display="always" Required="true" Mask="false">8265</Config>
+
+  <!-- Config volume -->
+  <Config Name="Config Path" Target="/config" Default="/mnt/user/appdata/metaden" Mode="rw" Description="Where MetaDen stores its configuration and settings." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/metaden</Config>
+
+  <!-- Media volume -->
+  <Config Name="Media Path" Target="/media" Default="/mnt/user" Mode="rw" Description="Root path to your media. You will browse this folder from within MetaDen to find movies to rename." Type="Path" Display="always" Required="true" Mask="false">/mnt/user</Config>
+
+  <!-- API Keys -->
+  <Config Name="TMDB API Key" Target="TMDB_API_KEY" Default="" Mode="" Description="Your TMDB API key for downloading movie posters. Get a free key at https://www.themoviedb.org/settings/api" Type="Variable" Display="always" Required="false" Mask="false"></Config>
+
+  <Config Name="OMDb API Key" Target="OMDB_API_KEY" Default="" Mode="" Description="Your OMDb API key for IMDB movie data. Get a free key at https://www.omdbapi.com/apikey.aspx" Type="Variable" Display="always" Required="false" Mask="false"></Config>
+
+  <!-- Optional: PUID/PGID -->
+  <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="User ID for file permissions. Use the ID of the user who owns your media files." Type="Variable" Display="advanced" Required="false" Mask="false">99</Config>
+
+  <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="Group ID for file permissions." Type="Variable" Display="advanced" Required="false" Mask="false">100</Config>
+
+</Container>
