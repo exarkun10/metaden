@@ -230,8 +230,10 @@ export const useMetaDenStore = defineStore('metaden', () => {
       // Capture what we need before folder refresh clears state
       const newFilePath = selectedFile.value.path.replace(/[^/]+$/, newFilename.value)
       const oldFolder = selectedFile.value.path.split('/').slice(0, -1).join('/')
-      const newStem = newFilename.value.replace(/\.[^.]+$/, '')
+      const savedNewFilename = newFilename.value
+      const newStem = savedNewFilename.replace(/\.[^.]+$/, '')
       const grandparent = oldFolder.split('/').slice(0, -1).join('/')
+      const newFolder = grandparent + '/' + newStem
       const newFolder = grandparent + '/' + newStem
       const savedMovie = movieDetails.value
       const savedPoster = selectedPosterUrl.value
@@ -241,7 +243,7 @@ export const useMetaDenStore = defineStore('metaden', () => {
       await openFolder(currentFolder.value)
       // Restore enough state for subtitle search without needing file in list
       if (doSubs) {
-        selectedFile.value = { path: newFilePath, name: newFilename.value, size: 0 }
+        selectedFile.value = { path: newFilePath, name: savedNewFilename, size: 0 }
         movieDetails.value = savedMovie
         selectedPosterUrl.value = savedPoster
         posters.value = savedPosters
