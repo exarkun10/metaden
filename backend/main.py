@@ -837,12 +837,20 @@ def read_release_info(folder: str) -> dict:
     return info
 
 
-def append_release_info(folder: str, line: str):
-    """Append a line to release_info.txt."""
+def append_release_info(folder: str, line: str, language: str = ""):
+    """Append a subtitle line to release_info.txt, replacing any existing line for the same language."""
     info_path = Path(folder) / "release_info.txt"
     try:
-        with open(info_path, "a") as f:
-            f.write(line + "\n")
+        existing_lines = []
+        if info_path.exists():
+            for existing in info_path.read_text().splitlines():
+                # If we have a language, drop any existing subtitle line for that language
+                if language and existing.startswith("Subtitles:") and f".{language}.srt" in existing:
+                    continue
+                existing_lines.append(existing)
+        existing_lines.append(line)
+        with open(info_path, "w") as f:
+            f.write("\n".join(existing_lines) + "\n")
     except Exception:
         pass
 
@@ -989,7 +997,8 @@ async def download_subtitle(req: SubtitleDownloadRequest):
             today = datetime.now().strftime("%Y-%m-%d")
             append_release_info(
                 str(folder),
-                f"Subtitles: {req.release_name}.{req.language}.srt (downloaded {today}, {req.match_type} match)"
+                f"Subtitles: {req.release_name}.{req.language}.srt (downloaded {today}, {req.match_type} match)",
+                language=req.language
             )
 
             # Step 5: Record undo transaction
