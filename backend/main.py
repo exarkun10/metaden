@@ -845,7 +845,7 @@ async def search_subtitles(folder: str, language: str = "en"):
 
     results = []
     try:
-        async with httpx.AsyncClient(timeout=15) as client:
+        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
             params = {
                 "query": release_stem,
                 "languages": language,
@@ -914,7 +914,7 @@ async def download_subtitle(req: SubtitleDownloadRequest):
     }
 
     try:
-        async with httpx.AsyncClient(timeout=30) as client:
+        async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
             # Step 1: Request download link from OpenSubtitles
             r = await client.post(
                 f"{OPENSUBTITLES_API_URL}/download",
