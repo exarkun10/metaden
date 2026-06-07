@@ -42,7 +42,7 @@
         <div class="flex items-center gap-2 text-xs">
           <span class="text-zinc-500">Original:</span>
           <span class="font-mono text-zinc-300 truncate">{{ store.selectedFile.name }}</span>
-          <span class="ml-auto text-zinc-600 shrink-0">{{ formatSize(store.selectedFile.size) }}</span>
+          <span class="ml-auto text-zinc-600 shrink-0">{{ store.selectedFile.size ? formatSize(store.selectedFile.size) : '' }}</span>
         </div>
         <div class="text-[10px] text-amber-600 mt-0.5">Original filename saved to release_info.txt after rename</div>
       </div>
