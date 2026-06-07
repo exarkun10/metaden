@@ -323,7 +323,7 @@ async def parse_file(path: str):
 
 # ── IMDB / TMDB Search ────────────────────────────────────────────────────────
 
-async def search_imdb(query: str) -> List[dict]:
+async def search_imdb(query: str, year: str = "") -> List[dict]:
     """Search IMDB for movies matching query using OMDB API. Handles tt IDs directly."""
     cfg = load_config()
     omdb_key = cfg.get("omdb_api_key", "trilogy")
@@ -346,6 +346,8 @@ async def search_imdb(query: str) -> List[dict]:
     async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
         try:
             url = f"https://www.omdbapi.com/?s={query}&type=movie&apikey={omdb_key}"
+            if year:
+                url += f"&y={year}"
             r = await client.get(url)
             data = r.json()
             if data.get("Search"):
@@ -359,6 +361,10 @@ async def search_imdb(query: str) -> List[dict]:
                     })
         except Exception:
             pass
+
+    # If year provided, re-rank: exact year matches first, then others
+    if year and results:
+        results.sort(key=lambda r: (0 if str(r.get("year", "")).startswith(year) else 1))
 
     return results
 
@@ -444,8 +450,8 @@ async def probe_file(path: str):
 
 
 @app.get("/api/search")
-async def search_movies(query: str):
-    results = await search_imdb(query)
+async def search_movies(query: str, year: str = ""):
+    results = await search_imdb(query, year)
     return {"results": results}
 
 

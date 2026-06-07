@@ -145,7 +145,7 @@ export const useMetaDenStore = defineStore('metaden', () => {
           .join(' ')
       }
       if (!query.trim()) return
-      const { data } = await api.get('/search', { params: { query } })
+      const { data } = await api.get('/search', { params: { query, year: foundYear.value || '' } })
       searchResults.value = data.results
       if (data.results.length > 0) {
         await selectMovie(data.results[0])
