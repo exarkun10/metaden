@@ -636,6 +636,12 @@ async def rename_file(req: RenameRequest):
     if req.original_folder_name:
         info_path = new_path.parent / "release_info.txt"
         try:
+            # Preserve any subtitle lines already written (e.g. sub downloaded before rename)
+            existing_subtitle_lines = []
+            if info_path.exists():
+                for line in info_path.read_text().splitlines():
+                    if line.startswith("Subtitles:"):
+                        existing_subtitle_lines.append(line)
             info_lines = [
                 f"Original folder: {req.original_folder_name}",
                 f"Original filename: {orig.name}",
@@ -644,6 +650,7 @@ async def rename_file(req: RenameRequest):
             ]
             if req.movie_tt:
                 info_lines.append(f"IMDB: https://www.imdb.com/title/{req.movie_tt}/")
+            info_lines.extend(existing_subtitle_lines)
             info_path.write_text("\n".join(info_lines) + "\n")
             undo_actions.append({"action": "delete", "to_path": str(info_path)})
         except Exception:
