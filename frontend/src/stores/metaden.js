@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import axios from 'axios'
 
 const api = axios.create({ baseURL: '/api' })
@@ -361,6 +361,13 @@ export const useMetaDenStore = defineStore('metaden', () => {
   )
 
   const subtitlesAvailable = computed(() => !!config.value.has_opensubtitles_key)
+
+  // Auto re-search subtitles if language changes after a search has already been done
+  watch(() => config.value.subtitle_language, (newLang, oldLang) => {
+    if (oldLang && newLang !== oldLang && subtitleSearched.value) {
+      doSubtitleSearch()
+    }
+  })
 
   return {
     currentFolder, files, selectedFile, fileParts, foundTT, foundYear,
