@@ -786,7 +786,7 @@ class SubtitleDownloadRequest(BaseModel):
 # ── Subtitle Support ──────────────────────────────────────────────────────────
 
 OPENSUBTITLES_API_URL = "https://api.opensubtitles.com/api/v1"
-OPENSUBTITLES_APP_NAME = "MetaDen v1.1"
+OPENSUBTITLES_APP_NAME = "MetaDen/1.1"
 
 
 def read_release_info(folder: str) -> dict:
@@ -852,6 +852,8 @@ async def search_subtitles(folder: str, language: str = "en"):
                 "type": "movie",
             }
             r = await client.get(f"{OPENSUBTITLES_API_URL}/subtitles", headers=headers, params=params)
+            if r.status_code != 200:
+                raise HTTPException(status_code=500, detail=f"OpenSubtitles API error {r.status_code}: {r.text[:200]}")
             data = r.json()
 
             for item in data.get("data", []):
