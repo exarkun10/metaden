@@ -979,6 +979,19 @@ async def download_subtitle(req: SubtitleDownloadRequest):
                 f"Subtitles: {req.release_name}.{req.language}.srt (downloaded {today}, {req.match_type} match)"
             )
 
+            # Step 5: Record undo transaction
+            undo_list: list = cfg.get("undo_list", [])
+            undo_list.append({
+                "timestamp": datetime.now().isoformat(),
+                "actions": [{"action": "delete", "to_path": str(sub_path)}],
+                "description": f"Downloaded subtitle {sub_filename}",
+            })
+            max_undos = cfg.get("max_undos", 200)
+            if len(undo_list) > max_undos:
+                undo_list = undo_list[-max_undos:]
+            cfg["undo_list"] = undo_list
+            save_config(cfg)
+
     except HTTPException:
         raise
     except Exception as e:

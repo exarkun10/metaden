@@ -342,18 +342,6 @@ export const useMetaDenStore = defineStore('metaden', () => {
         match_type: sub.match_type,
         release_name: sub.release,
       })
-      // Record as its own undo transaction so it can be undone independently
-      await api.post('/config', { config: {
-        undo_list: [
-          ...(config.value.undo_list || []),
-          {
-            timestamp: new Date().toISOString(),
-            actions: [{ action: 'delete', to_path: data.full_path }],
-            description: `Downloaded subtitle ${data.filename}`,
-          }
-        ]
-      }})
-      await loadConfig()
       notify(`Downloaded: ${data.filename}`, 'success')
     } catch (e) {
       notify(e.response?.data?.detail || 'Subtitle download failed', 'error')
