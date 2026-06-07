@@ -9,7 +9,7 @@
   <Privileged>false</Privileged>
   <Support/>
   <Project>https://github.com/exarkun10/metaden</Project>
-  <Overview>MetaDen Movie File Renamer — Automatically renames movie files using IMDB/TMDB data. Browse a folder of video files, search IMDB for matches, download posters, and rename with a configurable format template. Built with FastAPI + Vue 3.</Overview>
+  <Overview>MetaDen v1.1 — Self-hosted movie file renamer. Scans a media folder, searches IMDB via OMDb, downloads posters from TMDB, and renames files using a configurable format template. v1.1 adds subtitle support via OpenSubtitles — search and download subtitles with release-match detection. Built with FastAPI + Vue 3.</Overview>
   <Category>MediaApp:Video Tools:</Category>
   <WebUI>http://[IP]:[PORT:8265]</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/exarkun10/metaden/main/metaden-template.xml</TemplateURL>
@@ -35,6 +35,8 @@
   <Config Name="TMDB API Key" Target="TMDB_API_KEY" Default="" Mode="" Description="Your TMDB API key for downloading movie posters. Get a free key at https://www.themoviedb.org/settings/api" Type="Variable" Display="always" Required="false" Mask="false"></Config>
 
   <Config Name="OMDb API Key" Target="OMDB_API_KEY" Default="" Mode="" Description="Your OMDb API key for IMDB movie data. Get a free key at https://www.omdbapi.com/apikey.aspx" Type="Variable" Display="always" Required="false" Mask="false"></Config>
+
+  <Config Name="OpenSubtitles API Key" Target="OPENSUBTITLES_API_KEY" Default="" Mode="" Description="Optional: Your OpenSubtitles API key for subtitle search and download. Register a free consumer key at https://www.opensubtitles.com/en/consumers" Type="Variable" Display="always" Required="false" Mask="false"></Config>
 
   <!-- Optional: PUID/PGID -->
   <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="User ID for file permissions. Use the ID of the user who owns your media files." Type="Variable" Display="advanced" Required="false" Mask="false">99</Config>

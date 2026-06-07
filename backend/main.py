@@ -9,7 +9,7 @@ import httpx
 from pathlib import Path
 from datetime import datetime
 
-app = FastAPI(title="MetaDen Movie Renamer", version="2.0.0")
+app = FastAPI(title="MetaDen Movie Renamer", version="1.1.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -1047,4 +1047,4 @@ async def download_subtitle(req: SubtitleDownloadRequest):
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "version": "2.0.0"}
+    return {"status": "ok", "version": "1.1.0"}

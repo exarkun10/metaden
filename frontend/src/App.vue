@@ -5,7 +5,7 @@
       <div class="flex items-center gap-2">
         <img src="/metaden-logo256.png" class="w-7 h-7 rounded-lg" alt="MetaDen" />
         <span class="font-semibold text-zinc-100 tracking-tight">MetaDen</span>
-        <span class="text-zinc-600 text-xs">v1.0</span>
+        <span class="text-zinc-600 text-xs">v1.1</span>
       </div>
 
       <div class="flex-1 flex items-center gap-2 max-w-xl">
@@ -50,7 +50,7 @@
         </div>
         <span class="text-xs text-zinc-400">Hide renamed</span>
       </label>
-      <button class="btn-ghost text-xs" @click="store.showUndo = true; store.loadUndoHistory()">Undo History</button>
+      <button class="btn-ghost text-xs" @click="store.showUndo = true; store.loadUndoHistory()">History</button>
       <button class="btn-ghost text-xs" @click="store.showSettings = true">⚙ Settings</button>
       <button class="btn-ghost text-xs" @click="showAbout = true">ℹ About</button>
     </header>
