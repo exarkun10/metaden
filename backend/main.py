@@ -984,7 +984,7 @@ async def download_subtitle(req: SubtitleDownloadRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Subtitle download failed: {str(e)}")
 
-    return {"success": True, "filename": sub_filename}
+    return {"success": True, "filename": sub_filename, "full_path": str(sub_path)}
 
 
 @app.get("/api/health")
