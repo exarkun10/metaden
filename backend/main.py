@@ -944,6 +944,12 @@ async def download_subtitle(req: SubtitleDownloadRequest):
     if not folder.exists():
         raise HTTPException(status_code=404, detail="Folder not found")
 
+    # Block if a subtitle for this language already exists in the folder
+    existing_subs = list(folder.glob(f"*.{req.language}.srt")) + list(folder.glob(f"*.{req.language}.generic.srt"))
+    if existing_subs:
+        existing_name = existing_subs[0].name
+        raise HTTPException(status_code=409, detail=f"Subtitle already exists: {existing_name} — delete it first to replace")
+
     headers = {
         "Api-Key": api_key,
         "Content-Type": "application/json",
