@@ -118,6 +118,34 @@
             </div>
           </section>
 
+          <!-- Subtitles -->
+          <section v-if="store.config.has_opensubtitles_key">
+            <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Subtitles</h3>
+            <div>
+              <label class="text-xs text-zinc-400 block mb-1">Preferred language</label>
+              <select v-model="local.subtitle_language" class="input w-full text-xs" @change="markDirty">
+                <option value="en">English</option>
+                <option value="fr">French</option>
+                <option value="es">Spanish</option>
+                <option value="de">German</option>
+                <option value="it">Italian</option>
+                <option value="pt">Portuguese</option>
+                <option value="nl">Dutch</option>
+                <option value="pl">Polish</option>
+                <option value="ru">Russian</option>
+                <option value="ja">Japanese</option>
+                <option value="zh">Chinese</option>
+                <option value="ko">Korean</option>
+                <option value="ar">Arabic</option>
+                <option value="sv">Swedish</option>
+                <option value="no">Norwegian</option>
+                <option value="da">Danish</option>
+                <option value="fi">Finnish</option>
+              </select>
+              <div class="text-xs text-zinc-600 mt-1">Used for subtitle search and download</div>
+            </div>
+          </section>
+
           <!-- Recent folders -->
           <section>
             <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Recent Folders</h3>
@@ -330,6 +358,7 @@ const DEFAULT_CONFIG = {
   noise_sources: ['WEB','WEBDL','WEBRIP','BLURAY','BDRIP','BDREMUX','HDRIP','HDTV','DVDRIP','AMZN','NF','DSNP','HMAX','ATVP','PCOK','STAN','PMTP'],
   noise_audio:   ['DDP5','DDP','AAC','DTS','AC3','MULTI','ATMOS','TRUEHD','FLAC','MP3','EAC3','DD5','DDPA'],
   noise_groups:  [],
+  subtitle_language: 'en',
 }
 
 function restoreDefaults() {
