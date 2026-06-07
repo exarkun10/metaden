@@ -48,7 +48,10 @@
       </div>
 
       <!-- Parts editor -->
-      <div class="px-4 py-3 border-b border-zinc-800 shrink-0">
+      <div class="flex-1 overflow-y-auto min-h-0">
+
+      <!-- Parts editor inner -->
+      <div class="px-4 py-3 border-b border-zinc-800">
         <div class="flex items-center gap-2 mb-2">
           <span class="text-xs text-zinc-500 font-medium">Search parts</span>
           <div class="flex-1" />
@@ -78,7 +81,7 @@
       </div>
 
       <!-- Search results -->
-      <div class="px-4 py-3 border-b border-zinc-800 shrink-0">
+      <div class="px-4 py-3 border-b border-zinc-800">
         <div class="text-xs text-zinc-500 font-medium mb-2">Search results</div>
         <div v-if="store.loading.search" class="text-xs text-zinc-600">Searching IMDB…</div>
         <div v-else-if="!store.searchResults.length" class="text-xs text-zinc-600">No results found.</div>
@@ -113,7 +116,7 @@
       </div>
 
       <!-- Movie details -->
-      <div v-if="store.movieDetails" class="px-4 py-3 border-b border-zinc-800 shrink-0 bg-zinc-900/50">
+      <div v-if="store.movieDetails" class="px-4 py-3 border-b border-zinc-800 bg-zinc-900/50">
         <div v-if="store.loading.movie" class="text-xs text-zinc-600">Loading…</div>
         <div v-else class="grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
           <div class="col-span-2 text-sm font-semibold text-zinc-100 mb-1">
@@ -153,7 +156,7 @@
       </div>
 
       <!-- Subtitles -->
-      <div v-if="store.subtitlesAvailable" class="px-4 py-3 border-b border-zinc-800 shrink-0">
+      <div v-if="store.subtitlesAvailable" class="px-4 py-3 border-b border-zinc-800">
         <div class="flex items-center gap-2 mb-1">
           <span class="text-xs text-zinc-500 font-medium">Subtitles</span>
           <div class="flex-1" />
@@ -210,8 +213,10 @@
         </div>
       </div>
 
+      </div><!-- end scrollable middle -->
+
       <!-- New filename + actions -->
-      <div class="px-4 py-3 mt-auto border-t border-zinc-800 shrink-0">
+      <div class="px-4 py-3 border-t border-zinc-800 shrink-0">
         <div class="text-xs text-zinc-500 mb-1.5 font-medium">New filename</div>
         <input
           v-model="store.newFilename"
