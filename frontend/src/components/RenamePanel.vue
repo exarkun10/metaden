@@ -36,7 +36,7 @@
       </div>
     </div>
 
-    <template v-else>
+    <div v-else class="flex flex-col h-full">
       <!-- File info bar -->
       <div class="px-4 py-2.5 border-b border-zinc-800 bg-zinc-900 shrink-0">
         <div class="flex items-center gap-2 text-xs">
@@ -236,7 +236,7 @@
           <button class="btn-danger" @click="store.doUndo()">↩ Undo</button>
         </div>
       </div>
-    </template>
+    </div>
   </div>
 </template>
 
