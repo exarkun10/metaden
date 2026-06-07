@@ -8,12 +8,12 @@
   <Shell>bash</Shell>
   <Privileged>false</Privileged>
   <Support/>
-  <Project/>
+  <Project>https://github.com/exarkun10/metaden</Project>
   <Overview>MetaDen Movie File Renamer — Automatically renames movie files using IMDB/TMDB data. Browse a folder of video files, search IMDB for matches, download posters, and rename with a configurable format template. Built with FastAPI + Vue 3.</Overview>
   <Category>MediaApp:Video Tools:</Category>
   <WebUI>http://[IP]:[PORT:8265]</WebUI>
-  <TemplateURL/>
-  <Icon>https://raw.githubusercontent.com/exarkun10/metaden/main/icon.png</Icon>
+  <TemplateURL>https://raw.githubusercontent.com/exarkun10/metaden/main/metaden-template.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/exarkun10/metaden/main/metaden-logo256.png</Icon>
   <ExtraParams/>
   <PostArgs/>
   <CPUset/>

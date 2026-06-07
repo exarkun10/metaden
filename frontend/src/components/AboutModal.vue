@@ -72,5 +72,5 @@
 
 <script setup>
 defineEmits(['close'])
-const version = '1.40'
+const version = '1.0'
 </script>

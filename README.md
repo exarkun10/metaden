@@ -1,4 +1,4 @@
-# MetaDen v1.40 — Movie File Renamer
+# MetaDen v1.0 — Movie File Renamer
 
 [![Docker Hub](https://img.shields.io/badge/Docker%20Hub-exarkun10%2Fmetaden-blue)](https://hub.docker.com/r/exarkun10/metaden)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)

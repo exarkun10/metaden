@@ -44,6 +44,7 @@
           <span class="font-mono text-zinc-300 truncate">{{ store.selectedFile.name }}</span>
           <span class="ml-auto text-zinc-600 shrink-0">{{ formatSize(store.selectedFile.size) }}</span>
         </div>
+        <div class="text-[10px] text-amber-600 mt-0.5">Original filename saved to release_info.txt after rename</div>
       </div>
 
       <!-- Parts editor -->
@@ -66,17 +67,12 @@
               @click="cyclePart(idx)"
               class="px-2.5 py-1 rounded-md text-xs font-medium font-mono transition-colors duration-100 border"
               :class="partClass(part.state)"
-              :title="`Click to cycle state (${part.state})`"
+              :title="`Click to toggle (${part.state})`"
             >{{ part.part }}</button>
-            <span class="absolute -top-1 -right-1 w-3 h-3 rounded-full text-[8px] flex items-center justify-center hidden group-hover:flex"
-              :class="stateIndicator(part.state)">
-              {{ stateIcon(part.state) }}
-            </span>
           </div>
         </div>
         <div class="mt-1.5 flex gap-4 text-[10px] text-zinc-600">
           <span><span class="inline-block w-2 h-2 rounded bg-indigo-700 mr-1"></span>search</span>
-          <span><span class="inline-block w-2 h-2 rounded bg-amber-800 mr-1"></span>keep</span>
           <span><span class="inline-block w-2 h-2 rounded bg-zinc-700 mr-1"></span>remove</span>
         </div>
       </div>
@@ -98,6 +94,21 @@
           >
             {{ m.title }} <span class="text-zinc-400">({{ m.year }})</span>
           </button>
+        </div>
+
+        <!-- Manual IMDB lookup -->
+        <div class="mt-3 pt-3 border-t border-zinc-800">
+          <div class="text-xs text-zinc-500 font-medium mb-1.5">Manual IMDB lookup</div>
+          <div class="flex gap-2">
+            <input
+              v-model="manualQuery"
+              class="input flex-1 font-mono text-xs"
+              placeholder="tt1234567 or custom search terms…"
+              @keydown.enter="runManualSearch"
+            />
+            <button class="btn-ghost text-xs px-3 shrink-0" @click="runManualSearch">Look Up</button>
+          </div>
+          <div class="text-[10px] text-zinc-600 mt-1">Paste a tt ID from IMDB to force a specific match, or type custom search terms</div>
         </div>
       </div>
 
@@ -141,6 +152,64 @@
         </div>
       </div>
 
+      <!-- Subtitles -->
+      <div v-if="store.subtitlesAvailable" class="px-4 py-3 border-b border-zinc-800 shrink-0">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-xs text-zinc-500 font-medium">Subtitles</span>
+          <span v-if="store.subtitleSearchTerm" class="text-[10px] text-zinc-600 font-mono truncate">{{ store.subtitleSearchTerm }}</span>
+          <div class="flex-1" />
+          <button class="btn-ghost text-xs" @click="store.doSubtitleSearch()" :disabled="store.loading.subtitles">
+            <span v-if="store.loading.subtitles">Searching…</span>
+            <span v-else>↺ Search</span>
+          </button>
+        </div>
+
+        <!-- Results -->
+        <div v-if="store.loading.subtitles" class="text-xs text-zinc-600">Searching OpenSubtitles…</div>
+        <div v-else-if="store.subtitleResults.length === 0 && store.subtitleSearched" class="text-xs text-zinc-600">No subtitles found.</div>
+        <div v-else class="flex flex-col gap-1 max-h-40 overflow-y-auto">
+          <div
+            v-for="sub in store.subtitleResults"
+            :key="sub.file_id"
+            class="flex items-center gap-2 px-2 py-1.5 rounded-md border text-xs transition-colors"
+            :class="sub.match_type === 'release'
+              ? 'bg-emerald-950/40 border-emerald-800/50'
+              : 'bg-zinc-800/60 border-zinc-700/50 opacity-75'"
+          >
+            <!-- Match badge -->
+            <span
+              class="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium"
+              :class="sub.match_type === 'release' ? 'bg-emerald-700 text-emerald-100' : 'bg-amber-800 text-amber-200'"
+            >{{ sub.match_type === 'release' ? 'Release' : 'Generic' }}</span>
+
+            <!-- Release name -->
+            <span class="flex-1 font-mono text-zinc-300 truncate" :title="sub.release">{{ sub.release || '(unnamed)' }}</span>
+
+            <!-- HI badge -->
+            <span v-if="sub.hearing_impaired" class="text-zinc-500 text-[10px]" title="Hearing impaired">HI</span>
+
+            <!-- Downloads -->
+            <span class="text-zinc-600 text-[10px] shrink-0">{{ sub.download_count.toLocaleString() }}↓</span>
+
+            <!-- Download button -->
+            <button
+              class="shrink-0 px-2 py-0.5 rounded text-[10px] font-medium bg-indigo-700 hover:bg-indigo-600 text-white transition-colors"
+              :disabled="store.loading.subtitleDownload"
+              @click="store.doSubtitleDownload(sub)"
+            >
+              <span v-if="store.loading.subtitleDownload === sub.file_id">…</span>
+              <span v-else>↓ Get</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Generic warning -->
+        <div v-if="store.subtitleResults.some(s => s.match_type === 'generic') && !store.subtitleResults.some(s => s.match_type === 'release')"
+          class="mt-2 text-[10px] text-amber-600">
+          ⚠ No exact release match found — generic subtitles may have timing issues
+        </div>
+      </div>
+
       <!-- New filename + actions -->
       <div class="px-4 py-3 mt-auto border-t border-zinc-800 shrink-0">
         <div class="text-xs text-zinc-500 mb-1.5 font-medium">New filename</div>
@@ -167,35 +236,36 @@
 </template>
 
 <script setup>
+import { ref, computed } from 'vue'
 import { useMetaDenStore } from '../stores/metaden.js'
 const store = useMetaDenStore()
 
-const STATES = ['part', 'keep', 'remove']
+
+const manualQuery = ref('')
+
+function runManualSearch() {
+  const q = manualQuery.value.trim()
+  if (!q) return
+  store.doSearch(q)
+  manualQuery.value = ''
+}
+// Two states only: 'part' (search) and 'remove'
+const STATES = ['part', 'remove']
 
 function cyclePart(idx) {
   const cur = store.fileParts[idx].state
-  const next = STATES[(STATES.indexOf(cur) + 1) % STATES.length]
+  // treat legacy 'keep' as 'part' so old state gracefully toggles
+  const normalized = cur === 'keep' ? 'part' : cur
+  const next = STATES[(STATES.indexOf(normalized) + 1) % STATES.length]
   store.updatePartState(idx, next)
 }
 
 function partClass(state) {
   return {
     part: 'bg-indigo-950 border-indigo-700 text-indigo-300 hover:border-indigo-500',
-    keep: 'bg-amber-950 border-amber-700 text-amber-300 hover:border-amber-500',
+    keep: 'bg-indigo-950 border-indigo-700 text-indigo-300 hover:border-indigo-500',
     remove: 'bg-zinc-800 border-zinc-700 text-zinc-500 line-through hover:border-zinc-500',
   }[state] || ''
-}
-
-function stateIndicator(state) {
-  return {
-    part: 'bg-indigo-600',
-    keep: 'bg-amber-600',
-    remove: 'bg-zinc-600',
-  }[state] || ''
-}
-
-function stateIcon(state) {
-  return { part: '?', keep: '✓', remove: '×' }[state] || ''
 }
 
 function isSelectedMovie(m) {

@@ -24,7 +24,12 @@ export const useMetaDenStore = defineStore('metaden', () => {
   const groups = ref([])
   const totalFiles = ref(0)
   const hideExtras = ref(false)
-  const loading = ref({ files: false, search: false, movie: false, rename: false, posters: false })
+  const loading = ref({ files: false, search: false, movie: false, rename: false, posters: false, subtitles: false, subtitleDownload: null })
+
+  // Subtitle state
+  const subtitleResults = ref([])
+  const subtitleSearchTerm = ref('')
+  const subtitleSearched = ref(false)
   const notification = ref(null)
   const showSettings = ref(false)
   const showUndo = ref(false)
@@ -100,6 +105,9 @@ export const useMetaDenStore = defineStore('metaden', () => {
     selectedPosterUrl.value = null
     newFilename.value = ''
     searchResults.value = []
+    subtitleResults.value = []
+    subtitleSearchTerm.value = ''
+    subtitleSearched.value = false
 
     // Parse the filename
     const { data } = await api.get('/parse', { params: { path: file.path } })
@@ -219,6 +227,10 @@ export const useMetaDenStore = defineStore('metaden', () => {
       notify(`Renamed to ${newFilename.value}`, 'success')
       // Refresh the folder to get updated paths
       await openFolder(currentFolder.value)
+      // Auto-search subtitles if key is configured
+      if (subtitlesAvailable.value) {
+        await doSubtitleSearch()
+      }
     } catch (e) {
       notify(e.response?.data?.detail || 'Rename failed', 'error')
     } finally {
@@ -250,8 +262,74 @@ export const useMetaDenStore = defineStore('metaden', () => {
   }
 
   function updatePartState(idx, state) {
-    fileParts.value[idx].state = state
+    const part = fileParts.value[idx]
+    const wasSearch = part.state === 'part'
+    part.state = state
+
+    // Auto-add to release groups if manually removed and not already a known noise word
+    if (state === 'remove' && wasSearch) {
+      const term = part.part.toUpperCase()
+      const cfg = config.value
+      const allKnown = [
+        ...(cfg.noise_codecs  || []),
+        ...(cfg.noise_sources || []),
+        ...(cfg.noise_audio   || []),
+        ...(cfg.noise_groups  || []),
+      ].map(t => t.toUpperCase())
+
+      const isYear = /^(19|20)\d{2}$/.test(term)
+      const isRes  = /^(4K|2160P?|1080P?|720P?|480P?|576P?|8K|UHD|HD|FHD|QHD)$/.test(term)
+
+      if (!allKnown.includes(term) && !isYear && !isRes) {
+        const groups = [...(cfg.noise_groups || []), term]
+        saveConfig({ ...cfg, noise_groups: groups })
+        notify('🔇 "' + part.part + '" added to Release Groups', 'info')
+      }
+    }
+
     refreshPreview()
+  }
+
+  async function doSubtitleSearch() {
+    if (!selectedFile.value) return
+    loading.value.subtitles = true
+    subtitleResults.value = []
+    subtitleSearched.value = false
+    try {
+      const folder = selectedFile.value.path.split('/').slice(0, -1).join('/')
+      const lang = config.value.subtitle_language || 'en'
+      const { data } = await api.get('/subtitles/search', { params: { folder, language: lang } })
+      subtitleResults.value = data.results
+      subtitleSearchTerm.value = data.search_term
+      subtitleSearched.value = true
+    } catch (e) {
+      notify(e.response?.data?.detail || 'Subtitle search failed', 'error')
+    } finally {
+      loading.value.subtitles = false
+    }
+  }
+
+  async function doSubtitleDownload(sub) {
+    if (!selectedFile.value || !movieDetails.value) return
+    loading.value.subtitleDownload = sub.file_id
+    try {
+      const folder = selectedFile.value.path.split('/').slice(0, -1).join('/')
+      // Build movie stem from current filename (strip extension)
+      const stem = selectedFile.value.name.replace(/\.[^.]+$/, '')
+      const { data } = await api.post('/subtitles/download', {
+        folder,
+        file_id: sub.file_id,
+        movie_stem: stem,
+        language: sub.language,
+        match_type: sub.match_type,
+        release_name: sub.release,
+      })
+      notify(`Downloaded: ${data.filename}`, 'success')
+    } catch (e) {
+      notify(e.response?.data?.detail || 'Subtitle download failed', 'error')
+    } finally {
+      loading.value.subtitleDownload = null
+    }
   }
 
   function notify(message, type = 'info') {
@@ -264,6 +342,8 @@ export const useMetaDenStore = defineStore('metaden', () => {
     fileParts.value.filter(p => p.state === 'part').map(p => p.part).join(' ')
   )
 
+  const subtitlesAvailable = computed(() => !!config.value.has_opensubtitles_key)
+
   return {
     currentFolder, files, selectedFile, fileParts, foundTT, foundYear,
     searchResults, selectedMovie, movieDetails, posters, selectedPosterUrl,
@@ -271,6 +351,7 @@ export const useMetaDenStore = defineStore('metaden', () => {
     searchQuery, hideRenamed, groups, totalFiles, hideExtras, scanResolution, subfolders, rootMediaPath,
     loadConfig, saveConfig, openFolder, autoScan, selectFile, doSearch, selectMovie,
     refreshPreview, doRename, doSkip, doUndo, updatePartState, notify,
-    loadUndoHistory,
+    loadUndoHistory, doSubtitleSearch, doSubtitleDownload,
+    subtitleResults, subtitleSearchTerm, subtitleSearched, subtitlesAvailable,
   }
 })

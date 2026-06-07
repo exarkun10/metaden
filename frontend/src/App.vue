@@ -3,9 +3,9 @@
     <!-- Top Bar -->
     <header class="flex items-center gap-3 px-4 py-2.5 border-b border-zinc-800 bg-zinc-900 shrink-0">
       <div class="flex items-center gap-2">
-        <div class="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center text-xs font-bold tracking-tight">M</div>
+        <img src="/metaden-logo256.png" class="w-7 h-7 rounded-lg" alt="MetaDen" />
         <span class="font-semibold text-zinc-100 tracking-tight">MetaDen</span>
-        <span class="text-zinc-600 text-xs">v1.40</span>
+        <span class="text-zinc-600 text-xs">v1.0</span>
       </div>
 
       <div class="flex-1 flex items-center gap-2 max-w-xl">

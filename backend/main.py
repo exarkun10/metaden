@@ -36,22 +36,14 @@ DEFAULT_CONFIG = {
     "saved_part_separator": ".",
     "movie_extensions": ["mkv", "avi", "wmv", "mp4", "m4v", "mov", "ts", "m2ts", "ogm", "mpg", "mpeg", "flv", "iso"],
     "subtitle_extensions": ["srt", "sub", "idx"],
-    "keep_terms": [
-        ["720p", "720p"], ["1080p", "1080p"], ["2160p", "2160p"], ["4k", "4K"],
-        ["bluray", "BluRay"], ["bdrip", "BDRip"], ["dvdrip", "DVDRip"],
-        ["webrip", "WEBRip"], ["web-dl", "WEB-DL"], ["hdtv", "HDTV"],
-        ["dc", "DC"], ["extended", "Extended"], ["remastered", "Remastered"],
-        ["directors", "Directors"], ["cut", "Cut"]
-    ],
-    "remove_terms": [
-        "xvid", "divx", "x264", "x265", "h264", "h265", "hevc", "avc",
-        "aac", "ac3", "dts", "mp3", "dubbed", "subbed", "sample",
-        "yify", "yts", "rarbg", "ettv", "fgt", "etrg", "ganool",
-        "proper", "repack", "internal", "limited", "multi", "retail"
-    ],
+    "noise_codecs":  ["H264","H265","X264","X265","HEVC","AVC","XVID","DIVX","AV1","VP9"],
+    "noise_sources": ["WEB","WEBDL","WEBRIP","BLURAY","BDRIP","BDREMUX","HDRIP","HDTV","DVDRIP","AMZN","NF","DSNP","HMAX","ATVP","PCOK","STAN","PMTP"],
+    "noise_audio":   ["DDP5","DDP","AAC","DTS","AC3","MULTI","ATMOS","TRUEHD","FLAC","MP3","EAC3","DD5","DDPA"],
+    "noise_groups":  [],
     "lower_terms": ["a", "an", "the", "and", "but", "or", "for", "nor",
                     "on", "at", "to", "by", "in", "of", "up", "as"],
     "max_undos": 200,
+    "subtitle_language": "en",
     "tmdb_api_key": "bb81778a56280ab7f28d2048dfdbec88",
     "undo_list": [],
     "last_folder": "",
@@ -75,6 +67,8 @@ def load_config() -> dict:
         cfg["tmdb_api_key"] = os.environ["TMDB_API_KEY"]
     if os.environ.get("OMDB_API_KEY"):
         cfg["omdb_api_key"] = os.environ["OMDB_API_KEY"]
+    if os.environ.get("OPENSUBTITLES_API_KEY"):
+        cfg["opensubtitles_api_key"] = os.environ["OPENSUBTITLES_API_KEY"]
 
     return cfg
 
@@ -88,7 +82,7 @@ def save_config(cfg: dict):
 
 class FilePart(BaseModel):
     part: str
-    state: str  # 'part' | 'keep' | 'remove'
+    state: str  # 'part' | 'remove'
 
 
 class MovieResult(BaseModel):
@@ -148,7 +142,7 @@ def parse_filename(name: str, config: dict) -> tuple[list[FilePart], Optional[st
 
     found_tt = None
     found_year = None
-    set_rest_keep = False
+    set_rest_remove = False
     parts: list[FilePart] = []
 
     # Remove the last part only if it matches a known extension
@@ -162,9 +156,9 @@ def parse_filename(name: str, config: dict) -> tuple[list[FilePart], Optional[st
 
     for i, part in enumerate(raw_parts[:ext_idx]):
         part_lower = part.lower()
-        state = "keep" if set_rest_keep else "part"
+        state = "remove" if set_rest_remove else "part"
 
-        if state != "keep":
+        if state != "remove":
             # Check year
             year_m = YEAR_RE.match(part)
             if year_m and int(year_m.group(1)) > 1900:
@@ -177,6 +171,19 @@ def parse_filename(name: str, config: dict) -> tuple[list[FilePart], Optional[st
                 state = "remove"
             # Remove literal template tokens leftover from previous renames
             if re.match(r'^<[a-z0-9]+>$', part_lower):
+                state = "remove"
+            # Remove resolution tokens — not useful for IMDB searching
+            if re.match(r'^(4k|2160p?|1080p?|720p?|480p?|576p?|8k|uhd|hd|fhd|qhd)$', part_lower):
+                state = "remove"
+            # Remove noise words from user-configured lists
+            part_upper = part.upper()
+            all_noise = (
+                [t.upper() for t in config.get("noise_codecs",  [])] +
+                [t.upper() for t in config.get("noise_sources", [])] +
+                [t.upper() for t in config.get("noise_audio",   [])] +
+                [t.upper() for t in config.get("noise_groups",  [])]
+            )
+            if part_upper in all_noise:
                 state = "remove"
 
         parts.append(FilePart(part=part, state=state))
@@ -317,10 +324,24 @@ async def parse_file(path: str):
 # ── IMDB / TMDB Search ────────────────────────────────────────────────────────
 
 async def search_imdb(query: str) -> List[dict]:
-    """Search IMDB for movies matching query using OMDB API."""
+    """Search IMDB for movies matching query using OMDB API. Handles tt IDs directly."""
     cfg = load_config()
     omdb_key = cfg.get("omdb_api_key", "trilogy")
     results = []
+
+    # If query looks like a tt ID, fetch directly instead of searching
+    tt_match = re.match(r'^(tt\d+)$', query.strip(), re.IGNORECASE)
+    if tt_match:
+        details = await get_movie_details(tt_match.group(1).lower())
+        if details:
+            results.append({
+                "tt": details.get("tt", ""),
+                "title": details.get("title", ""),
+                "year": str(details.get("year", "")),
+                "aka": [],
+                "type": "Direct",
+            })
+        return results
 
     async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
         try:
@@ -402,16 +423,17 @@ async def probe_file(path: str):
             if len(parts) >= 2:
                 width = int(parts[0])
                 height = int(parts[1])
-                # Map to standard resolution labels
-                if height >= 4320:
+                # Map to standard resolution labels using width as primary
+                # indicator to handle widescreen crops (e.g. 1920x800 = 1080p)
+                if width >= 7680 or height >= 4320:
                     label = "4320p"
-                elif height >= 2160:
+                elif width >= 3840 or height >= 2160:
                     label = "2160p"
-                elif height >= 1080:
+                elif width >= 1800 or height >= 1080:
                     label = "1080p"
-                elif height >= 720:
+                elif width >= 1100 or height >= 720:
                     label = "720p"
-                elif height >= 480:
+                elif width >= 720 or height >= 480:
                     label = "480p"
                 else:
                     label = f"{height}p"
@@ -696,8 +718,9 @@ async def undo_last():
 @app.get("/api/config")
 async def get_config():
     cfg = load_config()
-    # don't send undo_list in config response (too large)
-    safe = {k: v for k, v in cfg.items() if k != "undo_list"}
+    # don't send undo_list or raw api keys in config response
+    safe = {k: v for k, v in cfg.items() if k not in ("undo_list", "opensubtitles_api_key")}
+    safe["has_opensubtitles_key"] = bool(cfg.get("opensubtitles_api_key", ""))
     return safe
 
 
@@ -749,6 +772,187 @@ async def list_folders(path: str):
 async def get_media_path():
     """Return the MEDIA_PATH env var and mount hint for the frontend."""
     return {"media_path": os.environ.get("MEDIA_PATH", "/media")}
+
+
+class SubtitleDownloadRequest(BaseModel):
+    folder: str
+    file_id: int
+    movie_stem: str          # e.g. "Alien Romulus (2024).tt18412256"
+    language: str            # e.g. "en"
+    match_type: str          # "release" or "generic"
+    release_name: str        # original release name for release_info.txt
+
+
+# ── Subtitle Support ──────────────────────────────────────────────────────────
+
+OPENSUBTITLES_API_URL = "https://api.opensubtitles.com/api/v1"
+OPENSUBTITLES_APP_NAME = "MetaDen v1.1"
+
+
+def read_release_info(folder: str) -> dict:
+    """Parse release_info.txt from a folder. Returns dict with available fields."""
+    info = {}
+    info_path = Path(folder) / "release_info.txt"
+    if not info_path.exists():
+        return info
+    try:
+        for line in info_path.read_text().splitlines():
+            if line.startswith("Original folder:"):
+                info["original_folder"] = line.split(":", 1)[1].strip()
+            elif line.startswith("Original filename:"):
+                info["original_filename"] = line.split(":", 1)[1].strip()
+            elif line.startswith("Renamed to:"):
+                info["renamed_to"] = line.split(":", 1)[1].strip()
+    except Exception:
+        pass
+    return info
+
+
+def append_release_info(folder: str, line: str):
+    """Append a line to release_info.txt."""
+    info_path = Path(folder) / "release_info.txt"
+    try:
+        with open(info_path, "a") as f:
+            f.write(line + "\n")
+    except Exception:
+        pass
+
+
+@app.get("/api/subtitles/search")
+async def search_subtitles(folder: str, language: str = "en"):
+    """Search OpenSubtitles for subtitles matching this movie folder."""
+    cfg = load_config()
+    api_key = cfg.get("opensubtitles_api_key", "")
+    if not api_key:
+        raise HTTPException(status_code=503, detail="OpenSubtitles API key not configured")
+
+    # Try release_info.txt first, fall back to folder name
+    info = read_release_info(folder)
+    release_name = info.get("original_folder") or info.get("original_filename", "")
+
+    # Fall back: use folder name itself (for Zeeb-renamed or hand-renamed files)
+    if not release_name:
+        release_name = Path(folder).name
+
+    # Strip extension from release_name if present
+    release_stem = Path(release_name).stem if "." in release_name else release_name
+
+    headers = {
+        "Api-Key": api_key,
+        "Content-Type": "application/json",
+        "User-Agent": OPENSUBTITLES_APP_NAME,
+    }
+
+    results = []
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            params = {
+                "query": release_stem,
+                "languages": language,
+                "type": "movie",
+            }
+            r = await client.get(f"{OPENSUBTITLES_API_URL}/subtitles", headers=headers, params=params)
+            data = r.json()
+
+            for item in data.get("data", []):
+                attrs = item.get("attributes", {})
+                files = attrs.get("files", [])
+                if not files:
+                    continue
+
+                # Determine match type — exact release name match = "release", else "generic"
+                sub_release = attrs.get("release", "")
+                is_release_match = (
+                    release_stem.lower().strip() == sub_release.lower().strip()
+                    if sub_release else False
+                )
+
+                results.append({
+                    "id": item.get("id"),
+                    "file_id": files[0].get("file_id"),
+                    "release": sub_release,
+                    "language": attrs.get("language", language),
+                    "match_type": "release" if is_release_match else "generic",
+                    "download_count": attrs.get("download_count", 0),
+                    "ratings": attrs.get("ratings", 0),
+                    "hearing_impaired": attrs.get("hearing_impaired", False),
+                    "fps": attrs.get("fps"),
+                    "uploader": attrs.get("uploader", {}).get("name", ""),
+                })
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"OpenSubtitles search failed: {str(e)}")
+
+    # Sort: release matches first, then by download count
+    results.sort(key=lambda x: (0 if x["match_type"] == "release" else 1, -x["download_count"]))
+
+    return {
+        "results": results,
+        "search_term": release_stem,
+        "source": "release_info" if info.get("original_folder") else "folder_name",
+    }
+
+
+@app.post("/api/subtitles/download")
+async def download_subtitle(req: SubtitleDownloadRequest):
+    """Download a subtitle file and place it next to the movie."""
+    cfg = load_config()
+    api_key = cfg.get("opensubtitles_api_key", "")
+    if not api_key:
+        raise HTTPException(status_code=503, detail="OpenSubtitles API key not configured")
+
+    folder = Path(req.folder)
+    if not folder.exists():
+        raise HTTPException(status_code=404, detail="Folder not found")
+
+    headers = {
+        "Api-Key": api_key,
+        "Content-Type": "application/json",
+        "User-Agent": OPENSUBTITLES_APP_NAME,
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            # Step 1: Request download link from OpenSubtitles
+            r = await client.post(
+                f"{OPENSUBTITLES_API_URL}/download",
+                headers=headers,
+                json={"file_id": req.file_id}
+            )
+            dl_data = r.json()
+            download_link = dl_data.get("link")
+            if not download_link:
+                raise HTTPException(status_code=500, detail="No download link returned")
+
+            # Step 2: Download the actual .srt content
+            srt_r = await client.get(download_link)
+            if srt_r.status_code != 200:
+                raise HTTPException(status_code=500, detail="Failed to download subtitle file")
+
+            # Step 3: Build filename
+            # e.g. "Alien Romulus (2024).tt18412256.en.srt"
+            #   or "Alien Romulus (2024).tt18412256.en.generic.srt"
+            if req.match_type == "release":
+                sub_filename = f"{req.movie_stem}.{req.language}.srt"
+            else:
+                sub_filename = f"{req.movie_stem}.{req.language}.generic.srt"
+
+            sub_path = folder / sub_filename
+            sub_path.write_bytes(srt_r.content)
+
+            # Step 4: Append to release_info.txt
+            today = datetime.now().strftime("%Y-%m-%d")
+            append_release_info(
+                str(folder),
+                f"Subtitles: {req.release_name}.{req.language}.srt (downloaded {today}, {req.match_type} match)"
+            )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Subtitle download failed: {str(e)}")
+
+    return {"success": True, "filename": sub_filename}
 
 
 @app.get("/api/health")
