@@ -234,7 +234,6 @@ export const useMetaDenStore = defineStore('metaden', () => {
       const newStem = savedNewFilename.replace(/\.[^.]+$/, '')
       const grandparent = oldFolder.split('/').slice(0, -1).join('/')
       const newFolder = grandparent + '/' + newStem
-      const newFolder = grandparent + '/' + newStem
       const savedMovie = movieDetails.value
       const savedPoster = selectedPosterUrl.value
       const savedPosters = posters.value
