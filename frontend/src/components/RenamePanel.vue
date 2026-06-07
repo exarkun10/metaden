@@ -159,6 +159,7 @@
       <div v-if="store.subtitlesAvailable" class="px-4 py-3 border-b border-zinc-800">
         <div class="flex items-center gap-2 mb-1">
           <span class="text-xs text-zinc-500 font-medium">Subtitles</span>
+          <span class="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-400 font-mono uppercase">{{ store.config.subtitle_language || 'en' }}</span>
           <div class="flex-1" />
           <button class="btn-ghost text-xs" @click="store.doSubtitleSearch()" :disabled="store.loading.subtitles">
             <span v-if="store.loading.subtitles">Searching…</span>
