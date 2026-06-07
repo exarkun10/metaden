@@ -30,6 +30,7 @@ export const useMetaDenStore = defineStore('metaden', () => {
   const subtitleResults = ref([])
   const subtitleSearchTerm = ref('')
   const subtitleSearched = ref(false)
+  const subtitleFolder = ref('')
   const notification = ref(null)
   const showSettings = ref(false)
   const showUndo = ref(false)
@@ -108,6 +109,7 @@ export const useMetaDenStore = defineStore('metaden', () => {
     subtitleResults.value = []
     subtitleSearchTerm.value = ''
     subtitleSearched.value = false
+    subtitleFolder.value = ''
 
     // Parse the filename
     const { data } = await api.get('/parse', { params: { path: file.path } })
@@ -227,6 +229,10 @@ export const useMetaDenStore = defineStore('metaden', () => {
       notify(`Renamed to ${newFilename.value}`, 'success')
       // Capture what we need before folder refresh clears state
       const newFilePath = selectedFile.value.path.replace(/[^/]+$/, newFilename.value)
+      const oldFolder = selectedFile.value.path.split('/').slice(0, -1).join('/')
+      const newStem = newFilename.value.replace(/\.[^.]+$/, '')
+      const grandparent = oldFolder.split('/').slice(0, -1).join('/')
+      const newFolder = grandparent + '/' + newStem
       const savedMovie = movieDetails.value
       const savedPoster = selectedPosterUrl.value
       const savedPosters = posters.value
@@ -239,6 +245,7 @@ export const useMetaDenStore = defineStore('metaden', () => {
         movieDetails.value = savedMovie
         selectedPosterUrl.value = savedPoster
         posters.value = savedPosters
+        subtitleFolder.value = newFolder
         await doSubtitleSearch()
       }
     } catch (e) {
@@ -306,7 +313,7 @@ export const useMetaDenStore = defineStore('metaden', () => {
     subtitleResults.value = []
     subtitleSearched.value = false
     try {
-      const folder = selectedFile.value.path.split('/').slice(0, -1).join('/')
+      const folder = subtitleFolder.value || selectedFile.value.path.split('/').slice(0, -1).join('/')
       const lang = config.value.subtitle_language || 'en'
       const { data } = await api.get('/subtitles/search', { params: { folder, language: lang } })
       subtitleResults.value = data.results
@@ -323,7 +330,7 @@ export const useMetaDenStore = defineStore('metaden', () => {
     if (!selectedFile.value || !movieDetails.value) return
     loading.value.subtitleDownload = sub.file_id
     try {
-      const folder = selectedFile.value.path.split('/').slice(0, -1).join('/')
+      const folder = subtitleFolder.value || selectedFile.value.path.split('/').slice(0, -1).join('/')
       // Build movie stem from current filename (strip extension)
       const stem = selectedFile.value.name.replace(/\.[^.]+$/, '')
       const { data } = await api.post('/subtitles/download', {
@@ -362,6 +369,6 @@ export const useMetaDenStore = defineStore('metaden', () => {
     loadConfig, saveConfig, openFolder, autoScan, selectFile, doSearch, selectMovie,
     refreshPreview, doRename, doSkip, doUndo, updatePartState, notify,
     loadUndoHistory, doSubtitleSearch, doSubtitleDownload,
-    subtitleResults, subtitleSearchTerm, subtitleSearched, subtitlesAvailable,
+    subtitleResults, subtitleSearchTerm, subtitleSearched, subtitlesAvailable, subtitleFolder,
   }
 })
