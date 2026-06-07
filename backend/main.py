@@ -907,8 +907,16 @@ async def search_subtitles(folder: str, language: str = "en"):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"OpenSubtitles search failed: {str(e)}")
 
-    # Sort: release matches first, then by download count
-    results.sort(key=lambda x: (0 if x["match_type"] == "release" else 1, -x["download_count"]))
+    # Score results: release match first, then by token overlap with search term, then download count
+    search_tokens = set(re.split(r'[\.\-_\s]+', release_stem.upper()))
+    for item in results:
+        sub_tokens = set(re.split(r'[\.\-_\s]+', item.get("release", "").upper()))
+        item["_score"] = len(search_tokens & sub_tokens)
+    results.sort(key=lambda x: (
+        0 if x["match_type"] == "release" else 1,
+        -x["_score"],
+        -x["download_count"]
+    ))
 
     return {
         "results": results,

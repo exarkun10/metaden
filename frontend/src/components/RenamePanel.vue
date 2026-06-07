@@ -154,15 +154,15 @@
 
       <!-- Subtitles -->
       <div v-if="store.subtitlesAvailable" class="px-4 py-3 border-b border-zinc-800 shrink-0">
-        <div class="flex items-center gap-2 mb-2">
+        <div class="flex items-center gap-2 mb-1">
           <span class="text-xs text-zinc-500 font-medium">Subtitles</span>
-          <span v-if="store.subtitleSearchTerm" class="text-[10px] text-zinc-600 font-mono truncate">{{ store.subtitleSearchTerm }}</span>
           <div class="flex-1" />
           <button class="btn-ghost text-xs" @click="store.doSubtitleSearch()" :disabled="store.loading.subtitles">
             <span v-if="store.loading.subtitles">Searching…</span>
             <span v-else>↺ Search</span>
           </button>
         </div>
+        <div v-if="store.subtitleSearchTerm" class="text-[10px] text-zinc-500 font-mono mb-2 break-all">{{ store.subtitleSearchTerm }}</div>
 
         <!-- Results -->
         <div v-if="store.loading.subtitles" class="text-xs text-zinc-600">Searching OpenSubtitles…</div>
