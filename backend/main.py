@@ -832,6 +832,8 @@ def read_release_info(folder: str) -> dict:
                 info["original_filename"] = line.split(":", 1)[1].strip()
             elif line.startswith("Renamed to:"):
                 info["renamed_to"] = line.split(":", 1)[1].strip()
+            elif line.startswith("IMDB:"):
+                info["imdb_url"] = line.split(":", 1)[1].strip()
     except Exception:
         pass
     return info
@@ -871,8 +873,25 @@ async def search_subtitles(folder: str, language: str = "en"):
     if not release_name:
         release_name = Path(folder).name
 
-    # Strip extension from release_name if present
-    release_stem = Path(release_name).stem if "." in release_name else release_name
+    # Strip extension from release_name if present — use full stem not Path.stem
+    # (Path.stem only strips last extension, e.g. "Movie.SDR.H265" → "Movie.SDR")
+    if release_name.lower().endswith(('.mkv','.avi','.mp4','.m4v','.mov','.ts','.m2ts')):
+        release_stem = release_name.rsplit('.', 1)[0]
+    else:
+        release_stem = release_name
+
+    # Extract IMDB tt ID from release_info.txt if present
+    imdb_id = None
+    imdb_url = info.get("imdb_url", "")
+    if imdb_url:
+        tt_match = re.search(r'(tt\d+)', imdb_url)
+        if tt_match:
+            imdb_id = tt_match.group(1)
+    # Also try to extract from folder name (already-renamed files with tt in name)
+    if not imdb_id:
+        tt_match = TT_IN_FILENAME.search(Path(folder).name)
+        if tt_match:
+            imdb_id = tt_match.group(0)
 
     headers = {
         "Api-Key": api_key,
@@ -884,10 +903,14 @@ async def search_subtitles(folder: str, language: str = "en"):
     try:
         async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
             params = {
-                "query": release_stem,
                 "languages": language,
                 "type": "movie",
             }
+            # Prefer IMDB ID search — much more accurate than text query
+            if imdb_id:
+                params["imdb_id"] = imdb_id
+            else:
+                params["query"] = release_stem
             r = await client.get(f"{OPENSUBTITLES_API_URL}/subtitles", headers=headers, params=params)
             if r.status_code != 200:
                 raise HTTPException(status_code=500, detail=f"OpenSubtitles API error {r.status_code}: {r.text[:200]}")
