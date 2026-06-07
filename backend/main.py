@@ -666,6 +666,22 @@ async def rename_file(req: RenameRequest):
         except Exception:
             pass
 
+    # Rename any MetaDen-downloaded subtitle files that match the original stem
+    orig_stem = orig.stem
+    new_stem = new_path.stem
+    if orig_stem != new_stem:
+        for srt in new_path.parent.glob("*.srt"):
+            if srt.name.startswith(orig_stem + "."):
+                # e.g. OldName.en.srt → NewName.en.srt
+                #      OldName.en.generic.srt → NewName.en.generic.srt
+                suffix = srt.name[len(orig_stem):]  # e.g. ".en.srt" or ".en.generic.srt"
+                new_srt = new_path.parent / (new_stem + suffix)
+                try:
+                    srt.rename(new_srt)
+                    undo_actions.append({"action": "rename", "from_path": str(new_srt), "to_path": str(srt)})
+                except Exception:
+                    pass
+
     # Record undo
     undo_list: list = cfg.get("undo_list", [])
     undo_list.append({
