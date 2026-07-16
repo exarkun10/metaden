@@ -1,10 +1,8 @@
-<?xml version="1.0"?>
-<Profiles>
-  <Profile>
-    <Name>MetaDen</Name>
-    <Description>Self-hosted movie file renamer. Scans your media folder, searches IMDB via OMDb, downloads posters from TMDB, and renames files using a configurable token-based format template. Inspired by the original Zeeb desktop app, rebuilt ground-up for the modern homelab.</Description>
-    <Support>https://forums.unraid.net/topic/199303-support-metaden-self-hosted-movie-file-renamer-imdb-tmdb-configurable-rename-templates/</Support>
-    <Project>https://github.com/exarkun10/metaden</Project>
-    <Icon>https://raw.githubusercontent.com/exarkun10/metaden/main/metaden-logo256.png</Icon>
-  </Profile>
-</Profiles>
+<?xml version="1.0" encoding="utf-8"?>
+<Maintainer>
+  <Name>ExarKun10</Name>
+  <Icon>https://raw.githubusercontent.com/exarkun10/metaden/main/metaden-logo256.png</Icon>
+  <Description>Creator of MetaDen, a self-hosted movie file renamer for Unraid.</Description>
+  <Support>https://forums.unraid.net/topic/199303-support-metaden-self-hosted-movie-file-renamer-imdb-tmdb-configurable-rename-templates/</Support>
+  <Profile>ExarKun10</Profile>
+</Maintainer>
