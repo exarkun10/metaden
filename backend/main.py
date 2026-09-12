@@ -44,7 +44,7 @@ DEFAULT_CONFIG = {
                     "on", "at", "to", "by", "in", "of", "up", "as"],
     "max_undos": 200,
     "subtitle_language": "en",
-    "tmdb_api_key": "bb81778a56280ab7f28d2048dfdbec88",
+    "tmdb_api_key": "",
     "undo_list": [],
     "last_folder": "",
     "recently_used_folders": []
@@ -306,12 +306,37 @@ async def list_files(folder: str, recursive: bool = True, hide_renamed: bool = F
     return {"groups": result_groups, "folder": str(path), "total_files": len(raw_files)}
 
 
+def is_gibberish(stem: str) -> bool:
+    """Return True if the filename stem looks like a random/temp name rather than a release name."""
+    # Must have at least one word separator (dot, space, underscore, dash)
+    if not re.search(r'[.\s_-]', stem):
+        # No separators — check if it looks like a hash/random string
+        # Real single-word titles exist (e.g. "Prey") but they'd come through
+        # with a year or resolution attached at folder level
+        if len(stem) > 12 and re.match(r'^[A-Za-z0-9]+$', stem):
+            return True
+    # Must contain a recognizable year OR at least 2 word-like tokens
+    has_year = bool(re.search(r'(19|20)\d{2}', stem))
+    tokens = re.split(r'[.\s_-]+', stem)
+    word_tokens = [t for t in tokens if re.match(r'^[A-Za-z]{2,}$', t)]
+    if not has_year and len(word_tokens) < 2:
+        return True
+    return False
+
+
 @app.get("/api/parse")
 async def parse_file(path: str):
-    """Parse a filename into searchable parts."""
+    """Parse a filename into searchable parts, falling back to folder name if filename is gibberish."""
     cfg = load_config()
     f = Path(path)
+    media_root = Path(cfg.get("last_folder", "/media"))
     stem = f.stem
+
+    # If the filename looks like gibberish, try the parent folder name instead
+    # but only if the parent isn't the root media folder
+    if is_gibberish(stem) and f.parent != media_root and f.parent.name:
+        stem = f.parent.name
+
     parts, tt, year = parse_filename(stem, cfg)
     return {
         "parts": [p.dict() for p in parts],
@@ -326,7 +351,7 @@ async def parse_file(path: str):
 async def search_imdb(query: str, year: str = "") -> List[dict]:
     """Search IMDB for movies matching query using OMDB API. Handles tt IDs directly."""
     cfg = load_config()
-    omdb_key = cfg.get("omdb_api_key", "trilogy")
+    omdb_key = cfg.get("omdb_api_key", "")
     results = []
 
     # If query looks like a tt ID, fetch directly instead of searching
@@ -372,7 +397,7 @@ async def search_imdb(query: str, year: str = "") -> List[dict]:
 async def get_movie_details(tt: str) -> Optional[dict]:
     """Get full movie details from OMDb by tt ID."""
     cfg = load_config()
-    omdb_key = cfg.get("omdb_api_key", "trilogy")
+    omdb_key = cfg.get("omdb_api_key", "")
     async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
         try:
             url = f"https://www.omdbapi.com/?i={tt}&plot=short&apikey={omdb_key}"
@@ -467,7 +492,7 @@ async def get_movie(tt: str):
 async def get_posters(tt: str):
     """Get poster images from TMDB."""
     cfg = load_config()
-    api_key = cfg.get("tmdb_api_key", "bb81778a56280ab7f28d2048dfdbec88")
+    api_key = cfg.get("tmdb_api_key", "")
     posters = []
 
     async with httpx.AsyncClient(timeout=10) as client:
